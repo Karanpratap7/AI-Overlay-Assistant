@@ -12,9 +12,7 @@ let package = Package(
             name: "AIOverlayAssistant",
             dependencies: [],
             path: "Sources",
-            resources: [
-                .process("Resources")
-            ]
+            exclude: ["Resources"]
         )
     ]
 )
