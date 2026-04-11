@@ -1,4 +1,6 @@
 import Foundation
+import Vision
+import AppKit
 
 /// Google Cloud Vision API service for OCR text extraction from screenshots.
 /// Extracts text + layout information from captured screen regions.
@@ -141,10 +143,6 @@ final class VisionService: ObservableObject {
 
         let result = OCRResult(fullText: fullText, blocks: blocks, confidence: avgConfidence)
 
-        await MainActor.run {
-            self.lastOCRResult = result
-        }
-
         print("🔍 OCR completed: \(fullText.count) characters, \(blocks.count) blocks")
         return result
     }
@@ -153,8 +151,6 @@ final class VisionService: ObservableObject {
 
     /// Uses Apple's built-in Vision framework for offline OCR (no API key needed).
     func performLocalOCR(imageData: Data) async throws -> String {
-        import Vision
-
         guard let image = NSImage(data: imageData),
               let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             throw VisionError.invalidImage

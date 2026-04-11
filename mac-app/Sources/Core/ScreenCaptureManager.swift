@@ -76,10 +76,20 @@ final class ScreenCaptureManager: NSObject, ObservableObject {
             config.showsCursor = false
 
             // Capture single frame
-            let image = try await SCScreenshotManager.captureImage(
-                contentFilter: filter,
-                configuration: config
-            )
+            let image: CGImage
+            if #available(macOS 14.0, *) {
+                image = try await SCScreenshotManager.captureImage(
+                    contentFilter: filter,
+                    configuration: config
+                )
+            } else {
+                // Fallback for macOS 13: use CGDisplayCreateImage
+                guard let fallbackImage = CGDisplayCreateImage(display.displayID) else {
+                    print("❌ Fallback screen capture failed")
+                    return nil
+                }
+                image = fallbackImage
+            }
 
             await MainActor.run {
                 self.lastCapturedImage = image

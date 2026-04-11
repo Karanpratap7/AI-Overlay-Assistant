@@ -3,6 +3,7 @@ import SwiftUI
 import ScreenCaptureKit
 
 /// Main application delegate — manages lifecycle, permissions, overlay panel, and status bar.
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Properties
