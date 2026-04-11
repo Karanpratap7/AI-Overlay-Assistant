@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Identity -->
+    <key>CFBundleName</key>
+    <string>AI Overlay Assistant</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.aioverlay.assistant</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>AIOverlayAssistant</string>
+
+    <!-- macOS Requirements -->
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+
+    <!-- UI Agent (no dock icon, menu bar only) -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- Privacy Permission Descriptions -->
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>AI Overlay Assistant needs screen capture access to read on-screen content and provide contextual AI assistance.</string>
+
+    <key>NSMicrophoneUsageDescription</key>
+    <string>AI Overlay Assistant needs microphone access to transcribe speech for AI-powered question answering.</string>
+
+    <key>NSCameraUsageDescription</key>
+    <string>AI Overlay Assistant does not use the camera. This permission is not required.</string>
+
+    <!-- Networking -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>api.openai.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <false/>
+                <key>NSExceptionRequiresForwardSecrecy</key>
+                <true/>
+            </dict>
+            <key>api.anthropic.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <false/>
+                <key>NSExceptionRequiresForwardSecrecy</key>
+                <true/>
+            </dict>
+            <key>generativelanguage.googleapis.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <false/>
+                <key>NSExceptionRequiresForwardSecrecy</key>
+                <true/>
+            </dict>
+            <key>vision.googleapis.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <false/>
+                <key>NSExceptionRequiresForwardSecrecy</key>
+                <true/>
+            </dict>
+        </dict>
+    </dict>
+
+    <!-- Sandbox & Entitlements -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+</dict>
+</plist>

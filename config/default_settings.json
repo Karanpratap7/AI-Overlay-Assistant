@@ -1,0 +1,49 @@
+{
+    "app": {
+        "name": "AI Overlay Assistant",
+        "version": "1.0.0",
+        "build": 1
+    },
+    "overlay": {
+        "defaultOpacity": 0.85,
+        "defaultWidth": 360,
+        "defaultHeight": 520,
+        "position": "bottom-right",
+        "cornerRadius": 16
+    },
+    "llm": {
+        "defaultProvider": "openai",
+        "defaultModel": "gpt-4o",
+        "maxTokens": 1024,
+        "temperature": 0.7,
+        "cooldownSeconds": 2.5,
+        "sessionTokenBudget": 100000
+    },
+    "capture": {
+        "imageFormat": "jpeg",
+        "imageQuality": 0.85,
+        "retina": true,
+        "showCursor": false
+    },
+    "audio": {
+        "transcriptionMode": "cloud",
+        "vadThresholdDB": -40.0,
+        "chunkDurationSeconds": 2.0,
+        "sampleRate": 44100
+    },
+    "memory": {
+        "maxConversationHistory": 5,
+        "persistToDisk": false
+    },
+    "shortcuts": {
+        "toggleOverlay": "Cmd+Shift+Space",
+        "captureRegion": "Cmd+Shift+C",
+        "toggleAudio": "Cmd+Shift+A",
+        "hideOverlay": "Escape"
+    },
+    "stealth": {
+        "enabled": true,
+        "monitorIntervalSeconds": 2.0,
+        "showStatusBadge": true
+    }
+}
