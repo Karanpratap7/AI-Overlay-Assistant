@@ -20,6 +20,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var whisperService: WhisperService!
 
     private var statusItem: NSStatusItem?
+    private var settingsWindow: NSWindow?
 
     // MARK: - Lifecycle
 
@@ -170,16 +171,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        // Activate the app first — menu bar apps don't auto-activate,
-        // so the settings window would open behind other apps.
-        NSApp.activate(ignoringOtherApps: true)
-
-        // macOS 13+ uses "showSettingsWindow:", older uses "showPreferencesWindow:"
-        if NSApp.responds(to: Selector(("showSettingsWindow:"))) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        // If the settings window already exists, just bring it forward
+        if let window = settingsWindow, window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
         }
+
+        // Create a new settings window with NSHostingController
+        let settingsView = SettingsView()
+        let hostingController = NSHostingController(rootView: settingsView)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 440),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentViewController = hostingController
+        window.title = "AI Overlay Assistant — Settings"
+        window.center()
+        window.isReleasedWhenClosed = false
+
+        self.settingsWindow = window
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func quitApp() {

@@ -5,10 +5,10 @@ struct AIOverlayApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // We use a Settings scene so we don't get a default window.
-        // The overlay panel is managed by AppDelegate.
+        // No default WindowGroup — windows are managed entirely by AppDelegate.
+        // Settings window is also created manually for reliable menu-bar-app behavior.
         Settings {
-            SettingsView()
+            EmptyView()
         }
     }
 }
