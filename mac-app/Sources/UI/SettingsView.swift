@@ -21,36 +21,53 @@ struct SettingsView: View {
 
     private let keychain = KeychainService.shared
 
+    @Environment(\.dismiss) private var dismiss
+
     // MARK: - Body
 
     var body: some View {
-        TabView {
-            apiKeysTab
-                .tabItem {
-                    Label("API Keys", systemImage: "key.fill")
-                }
+        VStack(spacing: 0) {
+            TabView {
+                apiKeysTab
+                    .tabItem {
+                        Label("API Keys", systemImage: "key.fill")
+                    }
 
-            shortcutsTab
-                .tabItem {
-                    Label("Shortcuts", systemImage: "keyboard")
-                }
+                shortcutsTab
+                    .tabItem {
+                        Label("Shortcuts", systemImage: "keyboard")
+                    }
 
-            modelTab
-                .tabItem {
-                    Label("Model", systemImage: "cpu")
-                }
+                modelTab
+                    .tabItem {
+                        Label("Model", systemImage: "cpu")
+                    }
 
-            appearanceTab
-                .tabItem {
-                    Label("Appearance", systemImage: "paintbrush")
-                }
+                appearanceTab
+                    .tabItem {
+                        Label("Appearance", systemImage: "paintbrush")
+                    }
 
-            aboutTab
-                .tabItem {
-                    Label("About", systemImage: "info.circle")
+                aboutTab
+                    .tabItem {
+                        Label("About", systemImage: "info.circle")
+                    }
+            }
+            
+            Divider()
+            
+            HStack {
+                Spacer()
+                Button("Done") {
+                    dismiss()
                 }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
+            .padding()
         }
-        .frame(width: 540, height: 440)
+        .frame(width: 540, height: 500)
         .onAppear(perform: loadKeyStatus)
     }
 

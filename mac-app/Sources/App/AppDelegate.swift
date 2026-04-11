@@ -4,12 +4,12 @@ import ScreenCaptureKit
 
 /// Main application delegate — manages lifecycle, permissions, overlay panel, and status bar.
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     // MARK: - Properties
 
     private var overlayPanel: OverlayPanel?
-    private(set) var overlayViewModel: OverlayViewModel!
+    @Published private(set) var overlayViewModel: OverlayViewModel?
     private var hotkeyManager: HotkeyManager!
     private var stealthManager: StealthManager!
     private var screenCaptureManager: ScreenCaptureManager!
@@ -82,6 +82,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Setup
 
     private func setupOverlayPanel() {
+        guard let overlayViewModel = overlayViewModel else { return }
         let contentView = OverlayContentView(viewModel: overlayViewModel)
         overlayPanel = OverlayPanel(contentView: contentView)
 
@@ -154,24 +155,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let panel = overlayPanel else { return }
         if panel.isVisible {
             panel.orderOut(nil)
-            overlayViewModel.isVisible = false
+            overlayViewModel?.isVisible = false
         } else {
             stealthManager.applyStealthToWindow(panel)
             panel.makeKeyAndOrderFront(nil)
-            overlayViewModel.isVisible = true
+            overlayViewModel?.isVisible = true
         }
     }
 
     private func hideOverlay() {
         overlayPanel?.orderOut(nil)
-        overlayViewModel.isVisible = false
+        overlayViewModel?.isVisible = false
     }
 
     @objc private func showOverlay() {
         guard let panel = overlayPanel else { return }
         stealthManager.applyStealthToWindow(panel)
         panel.makeKeyAndOrderFront(nil)
-        overlayViewModel.isVisible = true
+        overlayViewModel?.isVisible = true
     }
 
     @objc private func captureAndAnalyzeAction() {
@@ -179,11 +180,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func captureAndAnalyze() {
-        overlayViewModel.captureAndAnalyze()
+        overlayViewModel?.captureAndAnalyze()
     }
 
     private func toggleAudioCapture() {
-        overlayViewModel.toggleAudioCapture()
+        overlayViewModel?.toggleAudioCapture()
     }
 
     @objc private func showMainWindow() {
