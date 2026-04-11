@@ -350,9 +350,42 @@ struct MainWindowView: View {
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Color.white.opacity(0.05))
+            .modifier(ElectricBorderModifier(cornerRadius: 14))
+    }
+}
+
+// MARK: - Electric Border Modifier
+
+/// Adds an animated "electric border" using a rotating angular gradient.
+struct ElectricBorderModifier: ViewModifier {
+    var cornerRadius: CGFloat
+    @State private var rotation: Double = 0.0
+
+    func body(content: Content) -> some View {
+        content
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(
+                        AngularGradient(
+                            gradient: Gradient(colors: [
+                                Color.white.opacity(0.08),
+                                Color.white.opacity(0.08),
+                                Color.cyan.opacity(0.8),
+                                Color.purple.opacity(0.8),
+                                Color.cyan.opacity(0.8),
+                                Color.white.opacity(0.08),
+                                Color.white.opacity(0.08)
+                            ]),
+                            center: .center,
+                            angle: .degrees(rotation)
+                        ),
+                        lineWidth: 1.5
+                    )
             )
+            .onAppear {
+                withAnimation(.linear(duration: 4.0).repeatForever(autoreverses: false)) {
+                    rotation = 360.0
+                }
+            }
     }
 }
