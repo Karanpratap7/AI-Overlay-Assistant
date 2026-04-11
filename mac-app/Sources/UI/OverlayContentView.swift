@@ -28,8 +28,7 @@ struct OverlayContentView: View {
                 inputArea
             }
         }
-        .frame(width: 360)
-        .frame(minHeight: viewModel.isCollapsed ? CGFloat(44) : CGFloat(400))
+        .frame(width: 360, height: viewModel.isCollapsed ? 44 : 500)
         .background(glassBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(

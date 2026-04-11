@@ -62,7 +62,20 @@ class OverlayPanel: NSPanel {
         let hostingView = NSHostingView(rootView: view)
         hostingView.translatesAutoresizingMaskIntoConstraints = false
 
-        contentView = hostingView
+        // Create a plain container so AutoLayout doesn't fight the window frame
+        let container = NSView(frame: contentRect(forFrameRect: frame))
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.wantsLayer = true
+
+        container.addSubview(hostingView)
+        NSLayoutConstraint.activate([
+            hostingView.topAnchor.constraint(equalTo: container.topAnchor),
+            hostingView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+
+        contentView = container
     }
 
     private func positionOnScreen() {
