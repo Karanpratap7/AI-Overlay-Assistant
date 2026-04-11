@@ -170,7 +170,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        // Activate the app first — menu bar apps don't auto-activate,
+        // so the settings window would open behind other apps.
+        NSApp.activate(ignoringOtherApps: true)
+
+        // macOS 13+ uses "showSettingsWindow:", older uses "showPreferencesWindow:"
+        if NSApp.responds(to: Selector(("showSettingsWindow:"))) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        } else {
+            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        }
     }
 
     @objc private func quitApp() {
