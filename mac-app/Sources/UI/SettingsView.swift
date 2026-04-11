@@ -1,7 +1,7 @@
 import SwiftUI
+import Carbon
 
-/// Settings view for API key configuration and app preferences.
-/// Accessible via the menu bar or macOS Settings menu.
+/// Settings view for API key configuration, hotkey customization, and app preferences.
 struct SettingsView: View {
     // MARK: - State
 
@@ -17,6 +17,8 @@ struct SettingsView: View {
 
     @State private var keysConfigured: [KeychainService.KeyIdentifier: Bool] = [:]
 
+    @ObservedObject private var hotkeySettings = HotkeySettings.shared
+
     private let keychain = KeychainService.shared
 
     // MARK: - Body
@@ -26,6 +28,11 @@ struct SettingsView: View {
             apiKeysTab
                 .tabItem {
                     Label("API Keys", systemImage: "key.fill")
+                }
+
+            shortcutsTab
+                .tabItem {
+                    Label("Shortcuts", systemImage: "keyboard")
                 }
 
             modelTab
@@ -43,7 +50,7 @@ struct SettingsView: View {
                     Label("About", systemImage: "info.circle")
                 }
         }
-        .frame(width: 520, height: 420)
+        .frame(width: 540, height: 440)
         .onAppear(perform: loadKeyStatus)
     }
 
@@ -142,6 +149,74 @@ struct SettingsView: View {
         .padding()
     }
 
+    // MARK: - Shortcuts Tab
+
+    private var shortcutsTab: some View {
+        Form {
+            Section("Keyboard Shortcuts") {
+                Text("Click on a shortcut field, then press the key combination you want to use.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                ShortcutRecorderRow(
+                    label: "Toggle Overlay",
+                    shortcut: $hotkeySettings.toggleOverlay
+                )
+
+                ShortcutRecorderRow(
+                    label: "Capture Screen",
+                    shortcut: $hotkeySettings.captureRegion
+                )
+
+                ShortcutRecorderRow(
+                    label: "Toggle Audio",
+                    shortcut: $hotkeySettings.toggleAudio
+                )
+
+                ShortcutRecorderRow(
+                    label: "Hide Overlay",
+                    shortcut: $hotkeySettings.hideOverlay
+                )
+            }
+
+            Section {
+                HStack {
+                    Button("Save Shortcuts") {
+                        hotkeySettings.save()
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Spacer()
+
+                    Button("Reset to Defaults") {
+                        hotkeySettings.resetToDefaults()
+                    }
+                }
+            }
+
+            Section("Default Shortcuts") {
+                VStack(alignment: .leading, spacing: 6) {
+                    defaultRow("Toggle Overlay", "⌘⇧Space")
+                    defaultRow("Capture Screen", "⌘⇧C")
+                    defaultRow("Toggle Audio", "⌘⇧A")
+                    defaultRow("Hide Overlay", "Escape")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+    }
+
+    private func defaultRow(_ action: String, _ shortcut: String) -> some View {
+        HStack {
+            Text(action)
+            Spacer()
+            Text(shortcut)
+                .font(.system(.caption, design: .monospaced))
+        }
+    }
+
     // MARK: - Model Tab
 
     private var modelTab: some View {
@@ -208,28 +283,8 @@ struct SettingsView: View {
                     Text("Opacity: \(Int(overlayOpacity * 100))%")
                 }
             }
-
-            Section("Shortcuts") {
-                shortcutRow("Toggle Overlay", "⌘ ⇧ Space")
-                shortcutRow("Capture Screen", "⌘ ⇧ C")
-                shortcutRow("Toggle Audio", "⌘ ⇧ A")
-                shortcutRow("Hide Overlay", "Escape")
-            }
         }
         .padding()
-    }
-
-    private func shortcutRow(_ action: String, _ shortcut: String) -> some View {
-        HStack {
-            Text(action)
-            Spacer()
-            Text(shortcut)
-                .font(.system(size: 12, design: .monospaced))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(4)
-        }
     }
 
     // MARK: - About Tab
@@ -319,5 +374,97 @@ struct SettingsView: View {
         anthropicKey = ""
         geminiKey = ""
         googleVisionKey = ""
+    }
+}
+
+// MARK: - Shortcut Recorder Row
+
+/// A row that captures key presses to record a new shortcut.
+struct ShortcutRecorderRow: View {
+    let label: String
+    @Binding var shortcut: HotkeySettings.Shortcut
+    @State private var isRecording = false
+
+    var body: some View {
+        HStack {
+            Text(label)
+
+            Spacer()
+
+            if isRecording {
+                Text("Press shortcut…")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                    )
+            } else {
+                Button(action: { isRecording = true }) {
+                    Text(shortcut.displayString)
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.cyan)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.cyan.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(Color.cyan.opacity(0.3), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .background(
+            // Invisible key catcher when recording
+            Group {
+                if isRecording {
+                    KeyRecorderView { keyCode, modifiers in
+                        shortcut = HotkeySettings.Shortcut(
+                            keyCode: UInt32(keyCode),
+                            modifiers: modifiers.rawValue
+                        )
+                        isRecording = false
+                    }
+                    .frame(width: 0, height: 0)
+                }
+            }
+        )
+    }
+}
+
+// MARK: - Key Recorder (NSViewRepresentable)
+
+/// An invisible NSView that captures the next key press for shortcut recording.
+struct KeyRecorderView: NSViewRepresentable {
+    let onKeyRecorded: (_ keyCode: UInt16, _ modifiers: NSEvent.ModifierFlags) -> Void
+
+    func makeNSView(context: Context) -> KeyRecorderNSView {
+        let view = KeyRecorderNSView()
+        view.onKeyRecorded = onKeyRecorded
+        DispatchQueue.main.async {
+            view.window?.makeFirstResponder(view)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: KeyRecorderNSView, context: Context) {
+        nsView.onKeyRecorded = onKeyRecorded
+    }
+}
+
+class KeyRecorderNSView: NSView {
+    var onKeyRecorded: ((_ keyCode: UInt16, _ modifiers: NSEvent.ModifierFlags) -> Void)?
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func keyDown(with event: NSEvent) {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        onKeyRecorded?(event.keyCode, modifiers)
     }
 }

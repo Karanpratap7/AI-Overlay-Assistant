@@ -9,7 +9,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Properties
 
     private var overlayPanel: OverlayPanel?
-    private var overlayViewModel: OverlayViewModel!
+    private(set) var overlayViewModel: OverlayViewModel!
     private var hotkeyManager: HotkeyManager!
     private var stealthManager: StealthManager!
     private var screenCaptureManager: ScreenCaptureManager!
@@ -20,7 +20,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var whisperService: WhisperService!
 
     private var statusItem: NSStatusItem?
-    private var settingsWindow: NSWindow?
 
     // MARK: - Lifecycle
 
@@ -47,7 +46,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Create overlay panel
         setupOverlayPanel()
 
-        // Setup global hotkeys
+        // Setup global hotkeys (from saved settings)
         setupHotkeys()
 
         // Setup status bar icon
@@ -59,12 +58,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Apply stealth
         stealthManager.applyStealthToWindow(overlayPanel)
 
+        // Listen for hotkey setting changes
+        HotkeySettings.shared.onHotkeysChanged = { [weak self] in
+            self?.setupHotkeys()
+        }
+
+        // Activate the app so the main window appears
+        NSApp.activate(ignoringOtherApps: true)
+
         print("✅ AI Overlay Assistant launched successfully")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         hotkeyManager?.unregisterAll()
         audioCaptureManager?.stopCapture()
+    }
+
+    /// Keep the app running when the last window closes (for the menu bar + overlay).
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
     }
 
     // MARK: - Setup
@@ -78,36 +90,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupHotkeys() {
+        // Unregister any existing hotkeys before re-registering
+        hotkeyManager?.unregisterAll()
         hotkeyManager = HotkeyManager()
 
-        // Cmd+Shift+Space — Toggle overlay visibility
+        let settings = HotkeySettings.shared
+
+        // Toggle overlay visibility
         hotkeyManager.register(
-            keyCode: 49, // Space
-            modifiers: [.command, .shift]
+            keyCode: settings.toggleOverlay.keyCode,
+            modifiers: NSEvent.ModifierFlags(rawValue: settings.toggleOverlay.modifiers)
         ) { [weak self] in
             self?.toggleOverlay()
         }
 
-        // Cmd+Shift+C — Capture + Analyze
+        // Capture + Analyze
         hotkeyManager.register(
-            keyCode: 8, // C
-            modifiers: [.command, .shift]
+            keyCode: settings.captureRegion.keyCode,
+            modifiers: NSEvent.ModifierFlags(rawValue: settings.captureRegion.modifiers)
         ) { [weak self] in
             self?.captureAndAnalyze()
         }
 
-        // Cmd+Shift+A — Toggle audio capture
+        // Toggle audio capture
         hotkeyManager.register(
-            keyCode: 0, // A
-            modifiers: [.command, .shift]
+            keyCode: settings.toggleAudio.keyCode,
+            modifiers: NSEvent.ModifierFlags(rawValue: settings.toggleAudio.modifiers)
         ) { [weak self] in
             self?.toggleAudioCapture()
         }
 
-        // Escape — Hide overlay
+        // Hide overlay
         hotkeyManager.register(
-            keyCode: 53, // Escape
-            modifiers: []
+            keyCode: settings.hideOverlay.keyCode,
+            modifiers: NSEvent.ModifierFlags(rawValue: settings.hideOverlay.modifiers)
         ) { [weak self] in
             self?.hideOverlay()
         }
@@ -122,10 +138,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Show Overlay (⌘⇧Space)", action: #selector(showOverlay), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Capture Region (⌘⇧C)", action: #selector(captureAndAnalyzeAction), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Show Overlay", action: #selector(showOverlay), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Capture Region", action: #selector(captureAndAnalyzeAction), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Show Main Window", action: #selector(showMainWindow), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
 
@@ -170,33 +186,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         overlayViewModel.toggleAudioCapture()
     }
 
-    @objc private func openSettings() {
-        // If the settings window already exists, just bring it forward
-        if let window = settingsWindow, window.isVisible {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        // Create a new settings window with NSHostingController
-        let settingsView = SettingsView()
-        let hostingController = NSHostingController(rootView: settingsView)
-
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 440),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.contentViewController = hostingController
-        window.title = "AI Overlay Assistant — Settings"
-        window.center()
-        window.isReleasedWhenClosed = false
-
-        self.settingsWindow = window
-
-        window.makeKeyAndOrderFront(nil)
+    @objc private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
+        // The WindowGroup is managed by SwiftUI; activating the app brings it forward.
+        // If the user closed the window, open a new one via the standard command.
+        if NSApp.windows.filter({ $0 !== overlayPanel && $0.isVisible }).isEmpty {
+            NSApp.sendAction(#selector(NSWindow.makeKeyAndOrderFront(_:)), to: nil, from: nil)
+        }
     }
 
     @objc private func quitApp() {
