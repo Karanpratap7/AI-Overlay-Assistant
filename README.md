@@ -20,6 +20,27 @@ A native macOS AI assistant that captures screen content, transcribes audio, and
 
 ---
 
+## ✅ Positive Use Cases (Non-Cheating)
+
+AI Overlay Assistant can be used to make everyday work **faster, clearer, and more accessible**—without harming others.
+
+### Accessibility & inclusion
+- **Reading support** — simplify dense text, explain jargon, summarize long pages
+- **Translation** — translate selected on-screen text while keeping context
+- **Focus help** — turn what’s on screen into short checklists and next steps
+
+### Learning & coaching (outside graded/proctored contexts)
+- **Tutoring** — guided hints and explanations for practice problems and self-study
+- **Debugging mentor** — interpret logs/errors, suggest safe troubleshooting steps
+- **Writing clarity** — rewrite drafts for tone, brevity, and structure (you review before sending)
+
+### Productivity & knowledge work
+- **Meetings** — summarize notes/transcripts, generate action items and follow-ups
+- **Research** — extract key points from docs/papers, compare options, list pros/cons
+- **Privacy-first assist** — the overlay can keep sensitive help *off* recordings and screen shares when you’re presenting
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -135,9 +156,15 @@ The overlay remains visible only on your physical display.
 
 ---
 
-## ⚠️ Ethical Use Notice
+## ⚠️ Responsible Use (Anti-Cheating) Notice
 
-This tool is a **personal productivity assistant**. The stealth screen-share feature protects user privacy — not to deceive others. Users are responsible for compliance with the rules of any platform or environment they use this in.
+This tool is a **personal productivity and accessibility assistant**. The stealth screen-share feature is intended to **protect privacy** (e.g., when presenting or recording) — **not** to misrepresent work or bypass rules.
+
+Please use responsibly:
+- **Do not use** this in exams, interviews, or any proctored / closed-book / no-assistance environment.
+- **Follow policies** for schools, employers, clients, and platforms you’re using.
+- **Respect others**: don’t use the overlay to gain unfair advantage over people who are following the rules.
+- **Get consent** before capturing or transcribing other people’s audio/content.
 
 ---
 
