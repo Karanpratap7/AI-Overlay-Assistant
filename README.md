@@ -1,6 +1,6 @@
 # 🧠 AI Overlay Assistant (macOS)
 
-A native macOS AI assistant that captures screen content, transcribes audio, and uses LLM APIs to generate answers — all displayed in a **translucent floating overlay** that is **completely invisible to screen sharing and recording tools**.
+A native macOS AI assistant that captures screen content, transcribes audio, and runs answers through on-device Apple models or the LLM API of your choice — all displayed in a **translucent floating overlay** that is **completely invisible to screen sharing and recording tools**.
 
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B%20Ventura-blue)
 ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)
@@ -11,11 +11,11 @@ A native macOS AI assistant that captures screen content, transcribes audio, and
 ## ✨ Features
 
 - **🔒 Screen-Share Invisible** — Overlay is hidden from Zoom, Teams, OBS, QuickTime, and all macOS screenshot tools using `NSWindow.sharingType = .none`
-- **📸 Screen Capture** — Capture any screen region using ScreenCaptureKit with OCR text extraction
+- **📸 Screen Capture** — Capture any screen region using ScreenCaptureKit with on-device OCR via the Apple Vision framework (no network, no API key)
 - **🎤 Audio Transcription** — Real-time speech-to-text via Whisper API with voice activity detection
-- **🤖 Multi-LLM Support** — OpenAI (GPT-4o), Anthropic (Claude), and Google (Gemini) with streaming responses
+- **🤖 Multi-LLM Support** — On-device Apple Intelligence, OpenAI (GPT-4o), Anthropic (Claude), and Google (Gemini) with streaming responses
 - **💎 Glassmorphic UI** — Beautiful, translucent floating overlay with vibrancy effects
-- **🔐 Secure Credentials** — All API keys stored exclusively in macOS Keychain
+- **🔐 Private Credentials** — API keys stored in a local `0600` file owned by your user; no keychain access, so the app never triggers keychain prompts
 - **⌨️ Global Hotkeys** — Trigger from anywhere with system-wide keyboard shortcuts
 
 ---
@@ -48,7 +48,7 @@ AI Overlay Assistant can be used to make everyday work **faster, clearer, and mo
 - macOS 13.0 (Ventura) or later
 - Xcode 15.0+
 - Swift 5.9+
-- At least one LLM API key (OpenAI, Anthropic, or Google)
+- An API key is **optional** — on-device Apple Intelligence and OCR work out of the box. Add an OpenAI, Anthropic, or Google key only if you want a cloud model.
 
 ### Build & Run
 
@@ -68,8 +68,8 @@ open Package.swift
 ### First Launch
 
 1. Grant **Accessibility** permission when prompted (required for global hotkeys)
-2. Open Settings from the menu bar icon (🧠)
-3. Enter your API key(s) — they're stored securely in macOS Keychain
+2. The main dashboard window opens on launch
+3. Optionally add API key(s) in Settings — on-device Apple Intelligence needs none
 4. Press **⌘⇧Space** to show the overlay
 
 ---
@@ -88,30 +88,33 @@ open Package.swift
 ## 🏗️ Architecture
 
 ```
-mac-app/Sources/
-├── App/
-│   ├── EntryPoint.swift              # SwiftUI App entry point
-│   └── AppDelegate.swift             # Lifecycle, services, hotkeys
-├── Core/
-│   ├── HotkeyManager.swift           # Carbon-based global hotkeys
-│   ├── StealthManager.swift          # 🔒 Screen share invisibility
-│   ├── ScreenCaptureManager.swift    # ScreenCaptureKit integration
-│   ├── AudioCaptureManager.swift     # AVAudioEngine mic input
-│   └── ContextBuilder.swift          # LLM context assembly
-├── Services/
-│   ├── LLMService.swift              # Multi-provider LLM (streaming)
-│   ├── VisionService.swift           # Google Vision OCR
-│   ├── WhisperService.swift          # Whisper transcription
-│   └── KeychainService.swift         # Secure API key storage
-├── UI/
-│   ├── OverlayPanel.swift            # NSPanel with stealth config
-│   ├── OverlayViewModel.swift        # State management
-│   ├── OverlayContentView.swift      # Main overlay SwiftUI view
-│   ├── RegionSelectorView.swift      # Screen region selector
-│   └── SettingsView.swift            # API key + preferences
-└── Resources/
-    ├── Info.plist                     # Permission descriptions
-    └── AIOverlayAssistant.entitlements
+mac-app/
+├── Info.plist                         # Permission descriptions, ATS exceptions
+└── Sources/
+    ├── main.swift                     # AppKit entry point (LSUIElement agent app)
+    ├── App/
+    │   └── AppDelegate.swift         # Lifecycle, main window, services, hotkeys
+    ├── Core/
+    │   ├── HotkeyManager.swift        # Carbon-based global hotkeys
+    │   ├── HotkeySettings.swift      # Persisted hotkey config (UserDefaults)
+    │   ├── StealthManager.swift       # 🔒 Screen share invisibility
+    │   ├── ScreenCaptureManager.swift # ScreenCaptureKit integration
+    │   ├── AudioCaptureManager.swift  # AVAudioEngine mic input
+    │   └── ContextBuilder.swift       # LLM context assembly
+    ├── Services/
+    │   ├── LLMService.swift           # Multi-provider LLM (streaming)
+    │   ├── VisionService.swift        # On-device OCR (Apple Vision)
+    │   ├── WhisperService.swift       # Whisper transcription
+    │   └── CredentialStore.swift      # API key storage
+    ├── UI/
+    │   ├── MainWindowView.swift       # Dashboard
+    │   ├── OverlayPanel.swift         # NSPanel with stealth config
+    │   ├── OverlayViewModel.swift     # State management
+    │   ├── OverlayContentView.swift   # Main overlay SwiftUI view
+    │   ├── RegionSelectorView.swift   # Screen region selector
+    │   └── SettingsView.swift         # API key + preferences
+    └── Resources/
+        └── AIOverlayAssistant.entitlements
 ```
 
 ---
@@ -138,7 +141,8 @@ The overlay remains visible only on your physical display.
 
 ## 🔐 Security & Privacy
 
-- **API keys** are stored exclusively in macOS Keychain — never in `.env` files
+- **API keys** are stored in `~/Library/Application Support/AIOverlayAssistant/credentials.json` with `0600` permissions in a `0700` directory — never in `.env` files, and the app never touches the Keychain
+- **OCR** runs on-device via the Apple Vision framework — screenshots are never uploaded for text extraction
 - **Audio** is streamed in-memory only — never saved to disk
 - **Screenshots** are discarded after processing — never persisted
 - **Conversation history** is stored in memory only (clears on app quit)
@@ -150,6 +154,7 @@ The overlay remains visible only on your physical display.
 
 | Provider | Models | Features |
 |---|---|---|
+| Apple Intelligence | On-device Foundation Models | Streaming, no API key (macOS 26+) |
 | OpenAI | GPT-4o, GPT-4 Turbo | Streaming, Vision |
 | Anthropic | Claude Sonnet 4 | Streaming, Long context |
 | Google | Gemini 2.0 Flash | Streaming, Free tier |
