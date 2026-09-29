@@ -69,12 +69,14 @@ open Package.swift
 
 1. Grant **Accessibility** permission when prompted (required for global hotkeys)
 2. The main dashboard window opens on launch
-3. Optionally add API key(s) in Settings — on-device Apple Intelligence needs none
+3. Optionally add API key(s) in Settings (gear icon) — on-device Apple Intelligence needs none
 4. Press **⌘⇧Space** to show the overlay
 
 ---
 
 ## ⌨️ Keyboard Shortcuts
+
+These are the **defaults** — every one of them is remappable.
 
 | Shortcut | Action |
 |---|---|
@@ -82,6 +84,10 @@ open Package.swift
 | `⌘⇧C` | Capture screen region + analyze |
 | `⌘⇧A` | Toggle audio capture |
 | `Escape` | Hide overlay |
+
+To change them, click the gear icon (or **Configure...**) in the main window, then click a shortcut row and press the new key combination. Use **Reset to Defaults** to restore the values above. Custom shortcuts are saved to `UserDefaults`.
+
+> Modifier-less shortcuts such as `Escape` are handled by a local event monitor and only fire while the overlay or main window is focused. Shortcuts that include modifiers are registered system-wide.
 
 ---
 
