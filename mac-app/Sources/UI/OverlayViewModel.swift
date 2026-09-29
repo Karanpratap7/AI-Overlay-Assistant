@@ -102,7 +102,12 @@ final class OverlayViewModel: ObservableObject {
             await screenCaptureManager.checkPermission()
 
             guard let image = await screenCaptureManager.captureRegion() else {
-                appState = .error("Screen capture failed")
+                if screenCaptureManager.hasPermission == false {
+                    appState = .error("Screen Recording permission required")
+                    print("❌ Screen capture failed: Screen Recording permission not granted")
+                } else {
+                    appState = .error("Screen capture failed")
+                }
                 statusBadge = "🔒"
                 return
             }
@@ -200,6 +205,21 @@ final class OverlayViewModel: ObservableObject {
                 }
             }
         )
+    }
+
+    /// True when the current error is a missing Screen Recording permission.
+    var isScreenRecordingError: Bool {
+        if case .error(let message) = appState {
+            return message.hasPrefix("Screen Recording")
+        }
+        return false
+    }
+
+    /// Opens System Settings to the Screen & System Audio Recording pane.
+    func openPermissionsSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     /// Toggles audio capture on/off.

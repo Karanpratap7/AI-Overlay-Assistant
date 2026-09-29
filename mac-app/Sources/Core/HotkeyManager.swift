@@ -21,6 +21,11 @@ final class HotkeyManager {
     private var localMonitor: Any?
     private var eventHandlerRef: EventHandlerRef?
 
+    /// Bare (modifier-less) hotkeys — handled via the local event monitor so
+    /// they only fire when our windows are key, and consumed so they never
+    /// leak to the system (e.g. macOS 27's Siri entry points).
+    private var bareKeyHandlers: [UInt32: () -> Void] = [:]
+
     // MARK: - Init
 
     init() {
@@ -42,6 +47,16 @@ final class HotkeyManager {
     func register(keyCode: UInt32, modifiers: NSEvent.ModifierFlags, handler: @escaping () -> Void) {
         let id = nextId
         nextId += 1
+
+        // Modifier-less keys must NOT be registered as global Carbon hotkeys:
+        // they grab the key system-wide (breaking other apps) and macOS may
+        // still route the press to system gestures like Siri. Instead they are
+        // handled locally and consumed while one of our windows is key.
+        if modifiers.isEmpty {
+            bareKeyHandlers[keyCode] = handler
+            print("🔑 Bare-key hotkey registered (local only): keyCode=\(keyCode)")
+            return
+        }
 
         // Convert NSEvent modifiers to Carbon modifiers
         var carbonModifiers: UInt32 = 0
@@ -82,6 +97,7 @@ final class HotkeyManager {
             }
         }
         registrations.removeAll()
+        bareKeyHandlers.removeAll()
 
         if let globalMonitor = globalMonitor {
             NSEvent.removeMonitor(globalMonitor)
@@ -138,7 +154,7 @@ final class HotkeyManager {
         )
     }
 
-    // MARK: - NSEvent Monitor (Fallback for unregistered Carbon keys)
+    // MARK: - NSEvent Monitor (Fallback + bare-key handling)
 
     private func installNSEventMonitor() {
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -146,7 +162,14 @@ final class HotkeyManager {
         }
 
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handleKeyEvent(event)
+            guard let self = self else { return event }
+            // Bare (modifier-less) hotkeys: only act when a key of ours is
+            // pressed while our window is receiving events. Return nil so the
+            // event is swallowed and never reaches the system.
+            if let handler = self.bareKeyHandlers[UInt32(event.keyCode)] {
+                DispatchQueue.main.async { handler() }
+                return nil
+            }
             return event
         }
     }

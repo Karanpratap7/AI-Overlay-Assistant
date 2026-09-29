@@ -134,6 +134,29 @@ struct MainWindowView: View {
                     color: .green
                 )
             }
+
+            if viewModel.isScreenRecordingError {
+                HStack(spacing: 8) {
+                    Text("Screen capture needs Screen Recording permission.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.8))
+                        .lineLimit(2)
+
+                    Spacer()
+
+                    Button("Fix In Settings") {
+                        viewModel.openPermissionsSettings()
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.cyan)
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.cyan.opacity(0.1))
+                    .clipShape(Capsule())
+                }
+                .padding(.top, 4)
+            }
         }
         .padding(20)
         .background(cardBackground)
@@ -294,14 +317,13 @@ struct MainWindowView: View {
                 .buttonStyle(.plain)
             }
 
-            let keychain = KeychainService.shared
-            let keys = keychain.configuredKeys()
+            let credentials = CredentialStore.shared
+            let keys = credentials.configuredKeys()
 
             VStack(spacing: 6) {
                 apiKeyRow("OpenAI", configured: keys[.openAIKey] ?? false)
                 apiKeyRow("Anthropic", configured: keys[.anthropicKey] ?? false)
                 apiKeyRow("Gemini", configured: keys[.geminiKey] ?? false)
-                apiKeyRow("Google Vision", configured: keys[.googleVisionKey] ?? false)
             }
         }
         .padding(20)

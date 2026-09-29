@@ -64,13 +64,6 @@
                 <key>NSExceptionRequiresForwardSecrecy</key>
                 <true/>
             </dict>
-            <key>vision.googleapis.com</key>
-            <dict>
-                <key>NSExceptionAllowsInsecureHTTPLoads</key>
-                <false/>
-                <key>NSExceptionRequiresForwardSecrecy</key>
-                <true/>
-            </dict>
         </dict>
     </dict>
 

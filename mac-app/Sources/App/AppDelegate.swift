@@ -9,6 +9,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     // MARK: - Properties
 
     private var overlayPanel: OverlayPanel?
+    private(set) var mainWindow: NSWindow?
     @Published private(set) var overlayViewModel: OverlayViewModel?
     private var hotkeyManager: HotkeyManager!
     private var stealthManager: StealthManager!
@@ -46,6 +47,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // Create overlay panel
         setupOverlayPanel()
 
+        // Present the main window explicitly — agent apps (LSUIElement)
+        // do NOT auto-present a SwiftUI WindowGroup window on macOS.
+        setupMainWindow()
+
         // Setup global hotkeys (from saved settings)
         setupHotkeys()
 
@@ -65,6 +70,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
         // Activate the app so the main window appears
         NSApp.activate(ignoringOtherApps: true)
+        mainWindow?.makeKeyAndOrderFront(nil)
 
         print("✅ AI Overlay Assistant launched successfully")
     }
@@ -88,6 +94,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
         // Apply stealth settings
         overlayPanel?.sharingType = .none
+    }
+
+    /// Creates and presents the main dashboard window manually.
+    /// Reliable for LSUIElement (agent) apps, where SwiftUI WindowGroup
+    /// scenes don't auto-present a window at launch.
+    private func setupMainWindow() {
+        guard let viewModel = overlayViewModel else { return }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 580),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "AI Overlay Assistant"
+        window.contentView = NSHostingView(rootView: MainWindowView(viewModel: viewModel))
+        window.setContentSize(NSSize(width: 640, height: 580))
+        window.center()
+        window.minSize = NSSize(width: 580, height: 560)
+        window.isReleasedWhenClosed = false
+        // Keep the window visible when the app deactivates (accessory apps
+        // otherwise drop their windows when another app takes focus).
+        window.hidesOnDeactivate = false
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        mainWindow = window
     }
 
     private func setupHotkeys() {
@@ -189,10 +220,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     @objc private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        // The WindowGroup is managed by SwiftUI; activating the app brings it forward.
-        // If the user closed the window, open a new one via the standard command.
-        if NSApp.windows.filter({ $0 !== overlayPanel && $0.isVisible }).isEmpty {
-            NSApp.sendAction(#selector(NSWindow.makeKeyAndOrderFront(_:)), to: nil, from: nil)
+        if let mainWindow = mainWindow {
+            mainWindow.makeKeyAndOrderFront(nil)
         }
     }
 

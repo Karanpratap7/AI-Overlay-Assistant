@@ -35,7 +35,7 @@ final class WhisperService: ObservableObject {
     // MARK: - Properties
 
     var mode: TranscriptionMode = .cloud
-    private let keychain = KeychainService.shared
+    private let credentials = CredentialStore.shared
 
     // MARK: - Transcribe
 
@@ -53,7 +53,7 @@ final class WhisperService: ObservableObject {
 
     private func transcribeCloud(audioData: Data) async throws -> String {
         // Use OpenAI key for Whisper API (same provider)
-        guard let apiKey = keychain.retrieve(key: .openAIKey) else {
+        guard let apiKey = credentials.retrieve(key: .openAIKey) else {
             throw WhisperError.noAPIKey
         }
 

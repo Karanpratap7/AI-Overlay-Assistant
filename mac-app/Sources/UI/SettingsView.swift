@@ -8,18 +8,17 @@ struct SettingsView: View {
     @State private var openAIKey = ""
     @State private var anthropicKey = ""
     @State private var geminiKey = ""
-    @State private var googleVisionKey = ""
 
-    @State private var selectedProvider: LLMService.Provider = .openai
-    @State private var selectedModel = "gpt-4o"
+    @State private var selectedProvider: LLMService.Provider = .appleAI
+    @State private var selectedModel = "Apple Intelligence"
     @State private var overlayOpacity: Double = 0.85
     @State private var showSaveConfirmation = false
 
-    @State private var keysConfigured: [KeychainService.KeyIdentifier: Bool] = [:]
+    @State private var keysConfigured: [CredentialStore.KeyIdentifier: Bool] = [:]
 
     @ObservedObject private var hotkeySettings = HotkeySettings.shared
 
-    private let keychain = KeychainService.shared
+    private let credentials = CredentialStore.shared
 
     @Environment(\.dismiss) private var dismiss
 
@@ -114,16 +113,13 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+            }
 
+            Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Label("Google Vision API Key", systemImage: "key")
-                        Spacer()
-                        keyStatusBadge(.googleVisionKey)
-                    }
-                    SecureField("AIza...", text: $googleVisionKey)
-                        .textFieldStyle(.roundedBorder)
-                    Text("Used for screen OCR (optional — falls back to Apple Vision)")
+                    Label("On-device Models", systemImage: "brain")
+                        .font(.headline)
+                    Text("OCR and Apple Intelligence run entirely on-device — no API key required. Optional keys above unlock cloud models.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -137,7 +133,7 @@ struct SettingsView: View {
                     .buttonStyle(.borderedProminent)
 
                     if showSaveConfirmation {
-                        Text("✅ Saved to Keychain")
+                        Text("✅ Saved")
                             .font(.caption)
                             .foregroundColor(.green)
                             .transition(.opacity)
@@ -146,7 +142,7 @@ struct SettingsView: View {
                     Spacer()
 
                     Button("Clear All Keys", role: .destructive) {
-                        keychain.clearAll()
+                        credentials.clearAll()
                         clearFields()
                         loadKeyStatus()
                     }
@@ -157,7 +153,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Security", systemImage: "lock.shield")
                         .font(.headline)
-                    Text("All API keys are stored exclusively in the macOS Keychain — never written to files on disk. Keys are accessible only to this application and are protected by your macOS login password.")
+                    Text("API keys are stored in a local file in ~/Library/Application Support/AIOverlayAssistant — readable only by your user account. No keychain access is used.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -267,6 +263,7 @@ struct SettingsView: View {
     private var modelList: some View {
         VStack(alignment: .leading, spacing: 8) {
             Group {
+                modelRow("Apple Intelligence", "On-device, no API key", .appleAI)
                 modelRow("GPT-4o", "Fast, multimodal, vision-capable", .openai)
                 modelRow("GPT-4 Turbo", "High capability, lower cost", .openai)
                 modelRow("claude-sonnet-4-20250514", "Excellent reasoning, long context", .anthropic)
@@ -339,7 +336,7 @@ struct SettingsView: View {
 
     // MARK: - Helpers
 
-    private func keyStatusBadge(_ key: KeychainService.KeyIdentifier) -> some View {
+    private func keyStatusBadge(_ key: CredentialStore.KeyIdentifier) -> some View {
         Group {
             if keysConfigured[key] == true {
                 Label("Configured", systemImage: "checkmark.circle.fill")
@@ -354,21 +351,18 @@ struct SettingsView: View {
     }
 
     private func loadKeyStatus() {
-        keysConfigured = keychain.configuredKeys()
+        keysConfigured = credentials.configuredKeys()
     }
 
     private func saveKeys() {
         if !openAIKey.isEmpty {
-            keychain.save(key: .openAIKey, value: openAIKey)
+            credentials.save(key: .openAIKey, value: openAIKey)
         }
         if !anthropicKey.isEmpty {
-            keychain.save(key: .anthropicKey, value: anthropicKey)
+            credentials.save(key: .anthropicKey, value: anthropicKey)
         }
         if !geminiKey.isEmpty {
-            keychain.save(key: .geminiKey, value: geminiKey)
-        }
-        if !googleVisionKey.isEmpty {
-            keychain.save(key: .googleVisionKey, value: googleVisionKey)
+            credentials.save(key: .geminiKey, value: geminiKey)
         }
 
         loadKeyStatus()
@@ -390,7 +384,6 @@ struct SettingsView: View {
         openAIKey = ""
         anthropicKey = ""
         geminiKey = ""
-        googleVisionKey = ""
     }
 }
 

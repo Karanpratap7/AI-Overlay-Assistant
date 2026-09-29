@@ -13,11 +13,5 @@
     <!-- Screen recording access -->
     <key>com.apple.security.screen-recording</key>
     <true/>
-
-    <!-- Keychain access for API key storage -->
-    <key>keychain-access-groups</key>
-    <array>
-        <string>$(AppIdentifierPrefix)com.aioverlay.assistant</string>
-    </array>
 </dict>
 </plist>

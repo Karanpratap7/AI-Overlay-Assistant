@@ -2,8 +2,8 @@ import Foundation
 import Vision
 import AppKit
 
-/// Google Cloud Vision API service for OCR text extraction from screenshots.
-/// Extracts text + layout information from captured screen regions.
+/// On-device OCR service powered by the Apple Vision framework.
+/// Runs entirely locally — no API key, no network access.
 final class VisionService: ObservableObject {
 
     // MARK: - Types
@@ -21,17 +21,15 @@ final class VisionService: ObservableObject {
     }
 
     enum VisionError: Error, LocalizedError {
-        case noAPIKey
         case invalidImage
-        case apiError(String)
         case noTextDetected
+        case visionError(String)
 
         var errorDescription: String? {
             switch self {
-            case .noAPIKey: return "Google Vision API key not configured"
             case .invalidImage: return "Invalid image data"
-            case .apiError(let msg): return "Vision API error: \(msg)"
             case .noTextDetected: return "No text detected in image"
+            case .visionError(let msg): return "Vision error: \(msg)"
             }
         }
     }
@@ -41,16 +39,21 @@ final class VisionService: ObservableObject {
     @Published var isProcessing = false
     @Published var lastOCRResult: OCRResult?
 
-    // MARK: - Properties
-
-    private let keychain = KeychainService.shared
-
     // MARK: - OCR
 
-    /// Performs OCR on a base64-encoded image using Google Cloud Vision API.
+    /// Performs OCR on a base64-encoded image using the local Vision framework.
     func performOCR(imageBase64: String) async throws -> OCRResult {
-        guard let apiKey = keychain.retrieve(key: .googleVisionKey) else {
-            throw VisionError.noAPIKey
+        guard let data = Data(base64Encoded: imageBase64) else {
+            throw VisionError.invalidImage
+        }
+        return try await performOCR(imageData: data)
+    }
+
+    /// Performs OCR on raw image data using the local Vision framework.
+    func performOCR(imageData: Data) async throws -> OCRResult {
+        guard let image = NSImage(data: imageData),
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            throw VisionError.invalidImage
         }
 
         await MainActor.run { self.isProcessing = true }
@@ -58,108 +61,10 @@ final class VisionService: ObservableObject {
             Task { @MainActor in self.isProcessing = false }
         }
 
-        let url = URL(string: "https://vision.googleapis.com/v1/images:annotate?key=\(apiKey)")!
-
-        let body: [String: Any] = [
-            "requests": [
-                [
-                    "image": ["content": imageBase64],
-                    "features": [
-                        ["type": "TEXT_DETECTION", "maxResults": 50],
-                        ["type": "DOCUMENT_TEXT_DETECTION", "maxResults": 1]
-                    ]
-                ]
-            ]
-        ]
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw VisionError.apiError("HTTP \(statusCode)")
-        }
-
-        return try parseVisionResponse(data)
-    }
-
-    // MARK: - Parse Response
-
-    private func parseVisionResponse(_ data: Data) throws -> OCRResult {
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let responses = json["responses"] as? [[String: Any]],
-              let firstResponse = responses.first else {
-            throw VisionError.apiError("Invalid response format")
-        }
-
-        // Check for errors
-        if let error = firstResponse["error"] as? [String: Any],
-           let message = error["message"] as? String {
-            throw VisionError.apiError(message)
-        }
-
-        // Extract full text from document text detection
-        var fullText = ""
-        if let fullTextAnnotation = firstResponse["fullTextAnnotation"] as? [String: Any],
-           let text = fullTextAnnotation["text"] as? String {
-            fullText = text
-        }
-
-        // Extract individual text blocks
-        var blocks: [OCRResult.TextBlock] = []
-        if let textAnnotations = firstResponse["textAnnotations"] as? [[String: Any]] {
-            // Skip first element (it's the full text)
-            for annotation in textAnnotations.dropFirst() {
-                let text = annotation["description"] as? String ?? ""
-                let confidence = (annotation["confidence"] as? NSNumber)?.floatValue ?? 0.0
-
-                var boundingBox = CGRect.zero
-                if let boundingPoly = annotation["boundingPoly"] as? [String: Any],
-                   let vertices = boundingPoly["vertices"] as? [[String: Any]] {
-                    if vertices.count >= 4 {
-                        let x = (vertices[0]["x"] as? NSNumber)?.doubleValue ?? 0
-                        let y = (vertices[0]["y"] as? NSNumber)?.doubleValue ?? 0
-                        let x2 = (vertices[2]["x"] as? NSNumber)?.doubleValue ?? 0
-                        let y2 = (vertices[2]["y"] as? NSNumber)?.doubleValue ?? 0
-                        boundingBox = CGRect(x: x, y: y, width: x2 - x, height: y2 - y)
-                    }
-                }
-
-                blocks.append(OCRResult.TextBlock(text: text, boundingBox: boundingBox, confidence: confidence))
-            }
-        }
-
-        if fullText.isEmpty && blocks.isEmpty {
-            throw VisionError.noTextDetected
-        }
-
-        // Calculate overall confidence
-        let avgConfidence: Float = blocks.isEmpty ? 0.5 : blocks.map(\.confidence).reduce(0, +) / Float(blocks.count)
-
-        let result = OCRResult(fullText: fullText, blocks: blocks, confidence: avgConfidence)
-
-        print("🔍 OCR completed: \(fullText.count) characters, \(blocks.count) blocks")
-        return result
-    }
-
-    // MARK: - Local OCR Fallback (Apple Vision Framework)
-
-    /// Uses Apple's built-in Vision framework for offline OCR (no API key needed).
-    func performLocalOCR(imageData: Data) async throws -> String {
-        guard let image = NSImage(data: imageData),
-              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            throw VisionError.invalidImage
-        }
-
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
                 if let error = error {
-                    continuation.resume(throwing: VisionError.apiError(error.localizedDescription))
+                    continuation.resume(throwing: VisionError.visionError(error.localizedDescription))
                     return
                 }
 
@@ -168,15 +73,42 @@ final class VisionService: ObservableObject {
                     return
                 }
 
-                let text = observations.compactMap { observation in
-                    observation.topCandidates(1).first?.string
-                }.joined(separator: "\n")
+                let blocks: [OCRResult.TextBlock] = observations.compactMap { observation in
+                    guard let candidate = observation.topCandidates(1).first else { return nil }
+                    return OCRResult.TextBlock(
+                        text: candidate.string,
+                        boundingBox: observation.boundingBox,
+                        confidence: candidate.confidence
+                    )
+                }
 
-                continuation.resume(returning: text)
+                // Sort in natural reading order: top-to-bottom, then left-to-right.
+                let sorted = blocks.sorted { a, b in
+                    let yA = a.boundingBox.midY
+                    let yB = b.boundingBox.midY
+                    if abs(yA - yB) > 0.01 { return yA > yB }
+                    return a.boundingBox.minX < b.boundingBox.minX
+                }
+
+                let fullText = sorted.map { $0.text }.joined(separator: "\n")
+                if fullText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    continuation.resume(throwing: VisionError.noTextDetected)
+                    return
+                }
+
+                let averageConfidence = sorted.isEmpty ? 0 : sorted.reduce(0) { $0 + $1.confidence } / Float(sorted.count)
+                let result = OCRResult(
+                    fullText: fullText,
+                    blocks: sorted,
+                    confidence: averageConfidence
+                )
+
+                continuation.resume(returning: result)
             }
 
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
+            request.minimumTextHeight = 0.01
 
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {

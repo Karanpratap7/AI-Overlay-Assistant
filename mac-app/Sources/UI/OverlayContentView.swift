@@ -21,6 +21,22 @@ struct OverlayContentView: View {
                     streamingView
                 }
 
+                if viewModel.isScreenRecordingError {
+                    HStack(spacing: 6) {
+                        Text("Screen Recording permission needed.")
+                            .font(.system(size: 10))
+                            .foregroundColor(.white.opacity(0.8))
+                        Button("Open Settings") {
+                            viewModel.openPermissionsSettings()
+                        }
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.cyan)
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                }
+
                 Divider()
                     .background(Color.white.opacity(0.1))
 
